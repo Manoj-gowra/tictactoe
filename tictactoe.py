@@ -4,6 +4,7 @@ Tic Tac Toe Player
 
 import math
 import copy
+import random
 
 X = "X"
 O = "O"
@@ -62,36 +63,25 @@ def winner(board):
     """
     Returns the winner of the game, if there is one.
     """
-    for i in range(3):
-        if board[i][0] == board[i][1] == board[i][2]:
-            if board[i][0] == X:
-                return X
-            elif board[i][0] == O:
-                return O
-            else:
-                return None
-    for j in range(3):
-        if board[0][j] == board[1][j] == board[2][j]:
-            if board[0][j] == X:
-                return X
-            elif board[0][j] == O:
-                return O
-            else:
-                return None
-    if board[0][0] == board[1][1] == board[2][2]:
-        if board[0][0] == X:
-            return X
-        elif board[0][0] == O:
-            return O
-        else:
-            return None
-    if board[2][0] == board[1][1] == board[0][2]:
-        if board[2][0] == X:
-            return X
-        elif board[2][0] == O:
-            return O
-        else:
-            return None
+    for row in board:
+        if row[0] is not EMPTY and row[0] == row[1] == row[2]:
+            return row[0]
+
+    # Checking for 3 in a col
+    for col in range(len(board)):
+        if (
+            board[0][col] is not EMPTY
+            and board[0][col] == board[1][col] == board[2][col]
+        ):
+            return board[0][col]
+
+    # Checking for Diagonals
+    if board[0][0] is not EMPTY and board[0][0] == board[1][1] == board[2][2]:
+        return board[0][0]
+
+    if board[0][2] is not EMPTY and board[0][2] == board[2][0] == board[1][1]:
+        return board[0][2]
+
     return None
 
 
@@ -125,46 +115,73 @@ def minimax(board):
     """
     if terminal(board):
         return None
-    else:
-        if player(board) == X:
-            value, move = max_value(board)
-            return move
-        else:
-            value, move = min_value(board)
-            return move
+
+    # If AI is X, ie, maximizing player
+    if player(board) is X:
+        _, bestAction = maximum(board, -math.inf, math.inf)
+        return bestAction
+    elif player(board) is O:
+        _, bestAction = minimum(board, -math.inf, math.inf)
+        return bestAction
 
 
-def max_value(board):
+# Helper function for minimax. Called by minimizing player on its possible moves.
+def maximum(board, alpha, beta):
+
+    # If game has ended, ie base case, return utility of the board
     if terminal(board):
-        return utility(board), None
+        return (utility(board), None)
 
-    v = float("-inf")
-    move = None
-    for action in actions(board):
-        # v = max(v, min_value(result(board, action)))
-        aux, act = min_value(result(board, action))
-        if aux > v:
-            v = aux
-            move = action
-            if v == 1:
-                return v, move
+    bestAction = None
+    bestScore = -math.inf
 
-    return v, move
+    # Shuffling the set of actions makes equally valued moves randomised
+    actionList = list(actions(board))
+    random.shuffle(actionList)
+
+    # For every successor action,
+    for action in actionList:
+        # Get the best the opponent can do
+        minValue, _ = minimum(result(board, action), alpha, beta)
+        # Update current best score and current best move
+        if minValue > bestScore:
+            bestScore = minValue
+            bestAction = action
+
+        # If bestScore is irrelevant, prune the rest of the branches
+        if bestScore >= beta:
+            break
+        # Else update alpha
+        alpha = max(alpha, bestScore)
+    return (bestScore, bestAction)
 
 
-def min_value(board):
+# Helper function for minimax.  Called by maximizing player on its possible moves.
+def minimum(board, alpha, beta):
+
+    # If game has ended, ie base case, return utility of the board
     if terminal(board):
-        return utility(board), None
+        return (utility(board), None)
 
-    v = float("inf")
-    move = None
-    for action in actions(board):
-        # v = max(v, min_value(result(board, action)))
-        aux, act = max_value(result(board, action))
-        if aux < v:
-            v = aux
-            move = action
-            if v == -1:
-                return v, move
+    bestAction = None
+    bestScore = math.inf
 
-    return v, move
+    # Shuffling the set of actions makes equally valued moves randomised
+    actionList = list(actions(board))
+    random.shuffle(actionList)
+
+    # For every successor action,
+    for action in actionList:
+        # Get the best the opponent can do
+        maxValue, _ = maximum(result(board, action), alpha, beta)
+        # Update current best score and current best move
+        if maxValue < bestScore:
+            bestScore = maxValue
+            bestAction = action
+
+        # If bestScore is irrelevant, prune the rest of the branches
+        if bestScore <= alpha:
+            break
+        # Else update beta
+        beta = min(beta, bestScore)
+    return (bestScore, bestAction)
